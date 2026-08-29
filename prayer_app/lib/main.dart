@@ -206,6 +206,28 @@ class LandscapeSvg extends StatelessWidget {
     ScenePhase.midnight: 'assets/scenes/midnight.svg',
   };
 
+  static const skySceneMap = {
+    ScenePhase.dawn: 'assets/scenes/sky_dawn.svg',
+    ScenePhase.morning: 'assets/scenes/sky_morning.svg',
+    ScenePhase.noon: 'assets/scenes/sky_noon.svg',
+    ScenePhase.afternoon: 'assets/scenes/sky_afternoon.svg',
+    ScenePhase.sunset: 'assets/scenes/sky_sunset.svg',
+    ScenePhase.evening: 'assets/scenes/sky_evening.svg',
+    ScenePhase.night: 'assets/scenes/sky_night.svg',
+    ScenePhase.midnight: 'assets/scenes/sky_midnight.svg',
+  };
+
+  static const landscapeSceneMap = {
+    ScenePhase.dawn: 'assets/scenes/landscape_dawn.svg',
+    ScenePhase.morning: 'assets/scenes/landscape_morning.svg',
+    ScenePhase.noon: 'assets/scenes/landscape_noon.svg',
+    ScenePhase.afternoon: 'assets/scenes/landscape_afternoon.svg',
+    ScenePhase.sunset: 'assets/scenes/landscape_sunset.svg',
+    ScenePhase.evening: 'assets/scenes/landscape_evening.svg',
+    ScenePhase.night: 'assets/scenes/landscape_night.svg',
+    ScenePhase.midnight: 'assets/scenes/landscape_midnight.svg',
+  };
+
   @override
   Widget build(BuildContext context) {
     final effectiveNow = now ?? DateTime.now();
@@ -222,24 +244,43 @@ class LandscapeSvg extends StatelessWidget {
     return Stack(
       fit: StackFit.expand,
       children: [
+        // 1. Sky Layer (Rearmost background)
         AnimatedSwitcher(
           duration: const Duration(milliseconds: 1400),
           switchInCurve: Curves.easeInOutCubic,
           switchOutCurve: Curves.easeInOutCubic,
           child: SvgPicture.asset(
-            sceneMap[phase]!,
-            key: ValueKey<ScenePhase>(phase),
+            skySceneMap[phase]!,
+            key: ValueKey<String>('sky_${phase.name}'),
             fit: BoxFit.cover,
             width: double.infinity,
             height: double.infinity,
           ),
         ),
+
+        // 2. Dynamic Celestial Sky (Sun / Moon in the sky, behind mountains and horizon)
         DynamicCelestialSky(
           phase: phase,
           now: effectiveNow,
           prayerTimes: effectivePrayerTimes,
           hijriDay: effectiveHijriDay,
         ),
+
+        // 3. Foreground Landscape Layer (Mountains, Lake, Ridge Trees, Meadow Hills, Flora)
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 1400),
+          switchInCurve: Curves.easeInOutCubic,
+          switchOutCurve: Curves.easeInOutCubic,
+          child: SvgPicture.asset(
+            landscapeSceneMap[phase]!,
+            key: ValueKey<String>('landscape_${phase.name}'),
+            fit: BoxFit.cover,
+            width: double.infinity,
+            height: double.infinity,
+          ),
+        ),
+
+        // 4. Ambient Particles
         _AmbientParticles(phase: phase),
       ],
     );

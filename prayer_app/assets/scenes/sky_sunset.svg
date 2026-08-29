@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 700" preserveAspectRatio="xMidYMid slice">
+<defs>
+  <linearGradient id="sky_sunset" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#312e81"/>
+    <stop offset="35%" stop-color="#7c2d12"/>
+    <stop offset="60%" stop-color="#ea580c"/>
+    <stop offset="80%" stop-color="#f59e0b"/>
+    <stop offset="100%" stop-color="#fde68a"/>
+  </linearGradient>
+</defs>
+
+<!-- Sky -->
+<rect width="1200" height="700" fill="url(#sky_sunset)"/>
+
+</svg>

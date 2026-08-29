@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 700" preserveAspectRatio="xMidYMid slice">
+<defs>
+  <linearGradient id="sky_evening" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#0f172a"/>
+    <stop offset="40%" stop-color="#1e1b4b"/>
+    <stop offset="70%" stop-color="#312e81"/>
+    <stop offset="100%" stop-color="#4c1d95"/>
+  </linearGradient>
+</defs>
+
+<!-- Sky -->
+<rect width="1200" height="700" fill="url(#sky_evening)"/>
+
+  <!-- Stars -->
+  <g opacity="0.6">
+    <circle cx="150" cy="80" r="1.5" fill="#ffffff"/>
+    <circle cx="280" cy="120" r="1.2" fill="#ffffff"/>
+    <circle cx="420" cy="65" r="1.8" fill="#ffffff"/>
+    <circle cx="560" cy="140" r="1.3" fill="#ffffff"/>
+    <circle cx="700" cy="90" r="1.6" fill="#ffffff"/>
+    <circle cx="820" cy="160" r="1.4" fill="#ffffff"/>
+    <circle cx="1120" cy="70" r="1.5" fill="#ffffff"/>
+    <circle cx="80" cy="190" r="1.0" fill="#ffffff"/>
+    <circle cx="640" cy="50" r="2.0" fill="#ffffff"/>
+    <circle cx="1020" cy="180" r="1.2" fill="#ffffff"/>
+  </g>
+</svg>
