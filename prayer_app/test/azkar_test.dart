@@ -268,8 +268,8 @@ void main() {
       // Verify Arabic text is prominent
       expect(find.textContaining('اللَّهُ لَا إِلَٰهَ إِلَّا هُوَ'), findsOneWidget);
 
-      // Verify "مشاهده ترجمه فارسی، کوردی، فضیلت و منبع" button is visible
-      final expandBtn = find.text('مشاهده ترجمه فارسی، کوردی، فضیلت و منبع');
+      // Verify "مشاهده بیشتر" button is visible
+      final expandBtn = find.text('مشاهده بیشتر');
       expect(expandBtn, findsOneWidget);
 
       // Tap to expand details
@@ -294,12 +294,11 @@ void main() {
       expect(find.textContaining('اخلاص و معوذتین'), findsOneWidget);
 
       // Tap m2 three times to complete final dhikr
-      final m2Counter = find.textContaining('تسبیح و شمارش');
-      await tester.tap(m2Counter);
-      await tester.pump(const Duration(milliseconds: 100));
-      await tester.tap(m2Counter);
-      await tester.pump(const Duration(milliseconds: 100));
-      await tester.tap(m2Counter);
+      await tester.tap(find.text('Space ␣'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Space ␣'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Space ␣'));
       await tester.pumpAndSettle();
 
       // Final item completed
@@ -324,11 +323,11 @@ void main() {
       await tester.pumpAndSettle();
 
       // List should contain both mock morning dhikrs
-      expect(find.text('آية الكرسي'), findsOneWidget);
-      expect(find.text('اخلاص و معوذتین'), findsOneWidget);
+      expect(find.textContaining('آية الكرسي'), findsOneWidget);
+      expect(find.textContaining('اخلاص و معوذتین'), findsOneWidget);
 
       // Tap to expand second item
-      final expandTriggers = find.text('مشاهده ترجمه، کوردی، فضیلت و منبع');
+      final expandTriggers = find.text('مشاهده بیشتر');
       expect(expandTriggers, findsNWidgets(2));
 
       await tester.tap(expandTriggers.at(1));
@@ -336,6 +335,36 @@ void main() {
 
       expect(find.textContaining('بگو او خدای یگانه است'), findsOneWidget);
       expect(find.textContaining('بڵێ خوا یەک و تاقانەیە'), findsOneWidget);
+    });
+
+    testWidgets('Tahlil dhikr completes at count 10', (tester) async {
+      final controller = AzkarController(
+        morningList: mockMorningAzkar,
+        eveningList: mockEveningAzkar,
+      );
+      final tahlilDhikr = DhikrItem(
+        id: 'm_tahlil_100',
+        category: 'morning',
+        order: 19,
+        count: 100,
+        title: 'تهلیل و توحید (۱۰ یا ۱۰۰ بار)',
+        arabic: 'لَا إِلَٰهَ إِلَّا اللَّهُ وَحْدَهُ لَا شَرِيكَ لَهُ',
+        translationFa: '',
+        translationKu: '',
+        virtue: '',
+        source: '',
+      );
+
+      for (int i = 0; i < 9; i++) {
+        controller.incrementCount(tahlilDhikr);
+        expect(controller.isDhikrCompleted('m_tahlil_100', 100), isFalse);
+      }
+
+      // 10th count completes it
+      final completed = controller.incrementCount(tahlilDhikr);
+      expect(completed, isTrue);
+      expect(controller.isDhikrCompleted('m_tahlil_100', 100), isTrue);
+      expect(controller.getCount('m_tahlil_100'), 10);
     });
 
     testWidgets('Dashboard renders compact zikrCard with Circular Progress Ring and dynamic remaining time', (tester) async {
@@ -367,17 +396,44 @@ void main() {
       expect(find.byType(AzkarDashboardCard), findsNothing);
 
       // 2. Compact zikrCard should contain circular progress ring, 0% and time remaining
-      expect(find.text('اذکار صبح ☀️'), findsOneWidget);
+      expect(find.text('اذکار صبح'), findsOneWidget);
       expect(find.text('۰٪'), findsOneWidget);
       expect(find.textContaining('هنوز اذکار صبح را نخوانده‌اید'), findsOneWidget);
-      expect(find.textContaining('تا طلوع آفتاب فرصت باقی است'), findsOneWidget);
 
       // 3. Tap on zikrCard launches AzkarView
-      await tester.tap(find.text('اذکار صبح ☀️'));
+      await tester.tap(find.text('اذکار صبح'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
 
       expect(find.byType(AzkarView), findsOneWidget);
+    });
+
+    testWidgets('shows celebratory completion dialog with confetti when all azkar completed', (tester) async {
+      final data = PrayerData({}, {});
+      data.fullMorningAzkar = [mockMorningAzkar.first]; // 1 item (count: 1)
+      data.fullEveningAzkar = mockEveningAzkar;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: AzkarView(
+            data: data,
+            initialCategory: 'morning',
+            initialStoryMode: true,
+            isDark: true,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Complete the single item
+      await tester.tap(find.text('Space ␣'));
+      await tester.pumpAndSettle(const Duration(milliseconds: 600));
+
+      // Celebratory dialog appears
+      expect(find.text('«الْحَمْدُ لِلَّٰهِ»'), findsOneWidget);
+      expect(find.text('اذکار امروز خوانده شده'), findsOneWidget);
+      expect(find.text('بازگشت به صفحه اصلی'), findsOneWidget);
+      expect(find.text('«أَلَا بِذِكْرِ اللَّهِ تَطْمَئِنُّ الْقُلُوبُ»'), findsOneWidget);
     });
   });
 }

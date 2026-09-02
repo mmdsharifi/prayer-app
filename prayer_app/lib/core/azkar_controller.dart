@@ -22,6 +22,33 @@ class AzkarController extends ChangeNotifier {
     _syncDateKey();
   }
 
+  /// تعیین هوشمند دسته اذکار: از اذان عصر تا عشاء اذکار شب/شام، در غیر این صورت اذکار صبح
+  static String resolveCategoryForTime({
+    required DateTime now,
+    required Map<String, dynamic> prayerTimes,
+  }) {
+    final asrStr = prayerTimes['asr']?.toString();
+    final ishaStr = prayerTimes['isha']?.toString();
+
+    if (asrStr != null && asrStr.contains(':') && ishaStr != null && ishaStr.contains(':')) {
+      final asrParts = asrStr.split(':');
+      final asrMin = (int.tryParse(asrParts[0]) ?? 16) * 60 + (int.tryParse(asrParts[1]) ?? 0);
+      final ishaParts = ishaStr.split(':');
+      final ishaMin = (int.tryParse(ishaParts[0]) ?? 20) * 60 + (int.tryParse(ishaParts[1]) ?? 30);
+      final nowMin = now.hour * 60 + now.minute;
+
+      if (nowMin >= asrMin && nowMin <= ishaMin) {
+        return 'evening';
+      }
+    } else {
+      final hour = now.hour;
+      if (hour >= 16 && hour < 21) {
+        return 'evening';
+      }
+    }
+    return 'morning';
+  }
+
   void _syncDateKey() {
     final now = DateTime.now();
     final key = '${now.year}-${now.month}-${now.day}';
@@ -54,7 +81,10 @@ class AzkarController extends ChangeNotifier {
 
   bool isDhikrCompleted(String id, int targetCount) {
     _syncDateKey();
-    return _completed[id] ?? ((_counts[id] ?? 0) >= targetCount);
+    if (_completed[id] == true) return true;
+    final cur = _counts[id] ?? 0;
+    final minReq = (id == 'm_tahlil_100' || id == 'e_tahlil_100') ? 10 : targetCount;
+    return cur >= minReq;
   }
 
   double getProgress([String? category]) {
@@ -85,20 +115,37 @@ class AzkarController extends ChangeNotifier {
     return (completed: completedCount, total: list.length);
   }
 
+  /// Returns the index of the first uncompleted dhikr in the specified (or active) category.
+  /// If all items are completed, returns 0.
+  int getResumeIndex([String? category]) {
+    _syncDateKey();
+    final cat = category ?? _activeCategory;
+    final list = cat == 'evening' ? eveningList : morningList;
+    if (list.isEmpty) return 0;
+
+    for (int i = 0; i < list.length; i++) {
+      if (!isDhikrCompleted(list[i].id, list[i].count)) {
+        return i;
+      }
+    }
+    return 0;
+  }
+
   void setCategory(String category) {
     if (_activeCategory != category) {
       _activeCategory = category;
-      _storyIndex = 0;
+      _storyIndex = getResumeIndex(category);
       _isDetailsExpanded = false;
       notifyListeners();
     }
   }
 
-  void setStoryMode(bool enabled, {int initialIndex = 0}) {
+  void setStoryMode(bool enabled, {int? initialIndex}) {
     _isStoryMode = enabled;
     if (enabled) {
       final list = currentList;
-      _storyIndex = initialIndex.clamp(0, list.isNotEmpty ? list.length - 1 : 0);
+      final targetIdx = initialIndex ?? getResumeIndex();
+      _storyIndex = targetIdx.clamp(0, list.isNotEmpty ? list.length - 1 : 0);
       _isDetailsExpanded = false;
     }
     notifyListeners();
@@ -119,16 +166,14 @@ class AzkarController extends ChangeNotifier {
   void setStoryIndex(int index) {
     final list = currentList;
     if (list.isEmpty) return;
-    final safeIdx = index.clamp(0, list.length - 1);
-    if (_storyIndex != safeIdx) {
-      _storyIndex = safeIdx;
-      _isDetailsExpanded = false;
-      notifyListeners();
-    }
+    _storyIndex = index.clamp(0, list.length - 1);
+    _isDetailsExpanded = false;
+    notifyListeners();
   }
 
   bool nextStory() {
     final list = currentList;
+    if (list.isEmpty) return false;
     if (_storyIndex < list.length - 1) {
       _storyIndex++;
       _isDetailsExpanded = false;
@@ -139,9 +184,25 @@ class AzkarController extends ChangeNotifier {
   }
 
   bool prevStory() {
+    final list = currentList;
+    if (list.isEmpty) return false;
     if (_storyIndex > 0) {
       _storyIndex--;
       _isDetailsExpanded = false;
+      notifyListeners();
+      return true;
+    }
+    return false;
+  }
+
+  bool previousStory() => prevStory();
+
+  bool directSetCount(DhikrItem item, int count) {
+    _syncDateKey();
+    final minReq = (item.id == 'm_tahlil_100' || item.id == 'e_tahlil_100') ? 10 : item.count;
+    if (count >= 0 && count <= item.count) {
+      _counts[item.id] = count;
+      _completed[item.id] = count >= minReq;
       notifyListeners();
       return true;
     }
@@ -152,18 +213,44 @@ class AzkarController extends ChangeNotifier {
   bool incrementCount(DhikrItem item) {
     _syncDateKey();
     final cur = _counts[item.id] ?? 0;
+    final minReq = (item.id == 'm_tahlil_100' || item.id == 'e_tahlil_100') ? 10 : item.count;
     if (cur < item.count) {
       final next = cur + 1;
       _counts[item.id] = next;
-      if (next >= item.count) {
+      if (next >= minReq) {
         _completed[item.id] = true;
       }
       notifyListeners();
-      return next >= item.count;
+      return next >= minReq;
     } else {
       _completed[item.id] = true;
       notifyListeners();
       return true;
+    }
+  }
+
+  /// Handles space key or button tap in story mode:
+  /// - Increments count
+  /// - If newly completed, transitions smoothly to the next dhikr
+  /// - If already completed, directly advances to the next dhikr
+  void handleStoryAction(DhikrItem item) {
+    _syncDateKey();
+    final alreadyDone = isDhikrCompleted(item.id, item.count);
+    if (alreadyDone) {
+      if (_storyIndex < currentList.length - 1) {
+        nextStory();
+      }
+      return;
+    }
+
+    final newlyCompleted = incrementCount(item);
+    if (newlyCompleted && _storyIndex < currentList.length - 1) {
+      final curIdx = _storyIndex;
+      Future.delayed(const Duration(milliseconds: 320), () {
+        if (_isStoryMode && _storyIndex == curIdx && isDhikrCompleted(item.id, item.count)) {
+          nextStory();
+        }
+      });
     }
   }
 

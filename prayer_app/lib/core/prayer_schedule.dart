@@ -1,6 +1,9 @@
 import 'package:flutter/cupertino.dart';
 import '../main.dart';
 
+String faDigits(String s) =>
+    s.replaceAllMapped(RegExp(r'\d'), (m) => '۰۱۲۳۴۵۶۷۸۹'[int.parse(m[0]!)]);
+
 /// Accurate astronomical conversion from Gregorian date to Jalali (Solar Hijri)
 ({int year, int month, int day}) gregorianToJalali(int gy, int gm, int gd) {
   const gDaysInMonth = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
