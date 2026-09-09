@@ -104,31 +104,30 @@ class AppDelegate: FlutterAppDelegate {
 
   // MARK: - Status Bar Setup
 
-  private func setupStatusBarItem() {
-    statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-    statusItem?.isVisible = true
-    if let button = statusItem?.button {
-      button.image = AppDelegate.systemSymbolImage(name: "sun.max.fill", pointSize: 13.0, weight: .medium)
-      button.imagePosition = .imageLeading
-      button.title = " ۰۰:۰۰"
-
-      let attr = NSAttributedString(
-        string: " ۰۰:۰۰",
-        attributes: [
-          .font: AppDelegate.vazirmatnFont(size: 13.5, weight: .bold),
-          .foregroundColor: NSColor.labelColor
-        ]
-      )
-      button.attributedTitle = attr
-      button.target = self
-      button.action = #selector(statusItemClicked(_:))
-      button.sendAction(on: [.leftMouseUp, .rightMouseUp])
+  @discardableResult
+  func getOrCreateStatusItem() -> NSStatusItem {
+    if let existing = self.statusItem {
+      return existing
     }
+    let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+    item.isVisible = true
+    item.behavior = [.removalAllowed]
+    self.statusItem = item
+    return item
   }
 
-  @objc private func statusItemClicked(_ sender: NSStatusBarButton) {
-    let menu = buildMenu()
-    statusItem?.popUpMenu(menu)
+  func setupStatusBarItem() {
+    DispatchQueue.main.async {
+      let item = self.getOrCreateStatusItem()
+      if let button = item.button {
+        let img = AppDelegate.systemSymbolImage(name: "sun.max.fill", pointSize: 13.0, weight: .semibold)
+        button.image = img
+        button.imagePosition = (img != nil) ? .imageLeading : .noImage
+        button.title = (img != nil) ? " ۰۰:۰۰" : "🕌 ۰۰:۰۰"
+        button.font = AppDelegate.vazirmatnFont(size: 13.0, weight: .bold)
+      }
+      item.menu = self.buildMenu()
+    }
   }
 
   func setupMethodChannel(messenger: FlutterBinaryMessenger) {
@@ -192,21 +191,6 @@ class AppDelegate: FlutterAppDelegate {
 
     self.currentTitle = timeStr
 
-    DispatchQueue.main.async {
-      if let button = self.statusItem?.button {
-        button.image = AppDelegate.systemSymbolImage(name: sfSymbol, pointSize: 13.0, weight: .medium)
-        button.imagePosition = .imageLeading
-
-        let attr = NSAttributedString(
-          string: " \(timeStr)",
-          attributes: [
-            .font: AppDelegate.vazirmatnFont(size: 13.5, weight: .bold),
-            .foregroundColor: NSColor.labelColor
-          ]
-        )
-        button.attributedTitle = attr
-      }
-    }
     if let np = args["nextPrayer"] as? [String: Any] {
       self.nextPrayerInfo = np
     }
@@ -221,6 +205,18 @@ class AppDelegate: FlutterAppDelegate {
     }
     if let date = args["date"] as? String {
       self.dateText = date
+    }
+
+    DispatchQueue.main.async {
+      let item = self.getOrCreateStatusItem()
+      if let button = item.button {
+        let img = AppDelegate.systemSymbolImage(name: sfSymbol, pointSize: 13.0, weight: .semibold)
+        button.image = img
+        button.imagePosition = (img != nil) ? .imageLeading : .noImage
+        button.title = (img != nil) ? " \(timeStr)" : "🕌 \(timeStr)"
+        button.font = AppDelegate.vazirmatnFont(size: 13.0, weight: .bold)
+      }
+      item.menu = self.buildMenu()
     }
 
     // Sync to Shared UserDefaults for macOS WidgetKit
