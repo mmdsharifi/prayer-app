@@ -111,7 +111,7 @@ class AppDelegate: FlutterAppDelegate {
     }
     let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
     item.isVisible = true
-    item.behavior = [.removalAllowed]
+    item.autosaveName = "PrayerAppStatusItem"
     self.statusItem = item
     return item
   }
@@ -120,11 +120,11 @@ class AppDelegate: FlutterAppDelegate {
     DispatchQueue.main.async {
       let item = self.getOrCreateStatusItem()
       if let button = item.button {
-        let img = AppDelegate.systemSymbolImage(name: "sun.max.fill", pointSize: 13.0, weight: .semibold)
+        let img = AppDelegate.systemSymbolImage(name: "sun.max.fill", pointSize: 14.0, weight: .semibold)
         button.image = img
         button.imagePosition = (img != nil) ? .imageLeading : .noImage
         button.title = (img != nil) ? " ۰۰:۰۰" : "🕌 ۰۰:۰۰"
-        button.font = AppDelegate.vazirmatnFont(size: 13.0, weight: .bold)
+        button.font = NSFont.monospacedDigitSystemFont(ofSize: 13.0, weight: .bold)
       }
       item.menu = self.buildMenu()
     }
@@ -210,11 +210,11 @@ class AppDelegate: FlutterAppDelegate {
     DispatchQueue.main.async {
       let item = self.getOrCreateStatusItem()
       if let button = item.button {
-        let img = AppDelegate.systemSymbolImage(name: sfSymbol, pointSize: 13.0, weight: .semibold)
+        let img = AppDelegate.systemSymbolImage(name: sfSymbol, pointSize: 14.0, weight: .semibold)
         button.image = img
         button.imagePosition = (img != nil) ? .imageLeading : .noImage
         button.title = (img != nil) ? " \(timeStr)" : "🕌 \(timeStr)"
-        button.font = AppDelegate.vazirmatnFont(size: 13.0, weight: .bold)
+        button.font = NSFont.monospacedDigitSystemFont(ofSize: 13.0, weight: .bold)
       }
       item.menu = self.buildMenu()
     }
