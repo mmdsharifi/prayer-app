@@ -659,7 +659,8 @@ class PrayerApp extends StatelessWidget {
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
           useMaterial3: true,
-          fontFamily: 'Vazirmatn',
+          fontFamily: 'Estedad',
+          fontFamilyFallback: const ['Vazirmatn'],
           colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF0F3D2E)),
         ),
         home: const HomePage(),

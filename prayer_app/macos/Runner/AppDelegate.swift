@@ -33,27 +33,60 @@ class AppDelegate: FlutterAppDelegate {
     configureWindowAppearance()
   }
 
-  // MARK: - Custom Font Registration (Vazirmatn)
+  // MARK: - Custom Font Registration (Estedad & Vazirmatn)
   private func registerCustomFonts() {
     let bundle = Bundle.main
-    let fontUrls: [URL] = [
-      bundle.url(forResource: "Vazirmatn-Regular", withExtension: "ttf", subdirectory: "flutter_assets/assets/fonts"),
-      bundle.url(forResource: "Vazirmatn-Medium", withExtension: "ttf", subdirectory: "flutter_assets/assets/fonts"),
-      bundle.url(forResource: "Vazirmatn-Bold", withExtension: "ttf", subdirectory: "flutter_assets/assets/fonts"),
-      bundle.bundleURL.appendingPathComponent("Contents/Frameworks/App.framework/Resources/flutter_assets/assets/fonts/Vazirmatn-Regular.ttf"),
-      bundle.bundleURL.appendingPathComponent("Contents/Frameworks/App.framework/Resources/flutter_assets/assets/fonts/Vazirmatn-Medium.ttf"),
-      bundle.bundleURL.appendingPathComponent("Contents/Frameworks/App.framework/Resources/flutter_assets/assets/fonts/Vazirmatn-Bold.ttf"),
-      bundle.bundleURL.appendingPathComponent("Contents/Frameworks/App.framework/Versions/A/Resources/flutter_assets/assets/fonts/Vazirmatn-Regular.ttf"),
-      bundle.bundleURL.appendingPathComponent("Contents/Frameworks/App.framework/Versions/A/Resources/flutter_assets/assets/fonts/Vazirmatn-Medium.ttf"),
-      bundle.bundleURL.appendingPathComponent("Contents/Frameworks/App.framework/Versions/A/Resources/flutter_assets/assets/fonts/Vazirmatn-Bold.ttf")
-    ].compactMap { $0 }
+    var fontUrls: [URL] = []
 
-    for url in fontUrls {
-      if FileManager.default.fileExists(atPath: url.path) {
-        var error: Unmanaged<CFError>?
-        CTFontManagerRegisterFontsForURL(url as CFURL, .process, &error)
+    let fontFiles = [
+      "Estedad-Regular.ttf", "Estedad-Medium.ttf", "Estedad-SemiBold.ttf", "Estedad-Bold.ttf",
+      "Estedad-FD-Regular.ttf", "Estedad-FD-Bold.ttf",
+      "Vazirmatn-Regular.ttf", "Vazirmatn-Medium.ttf", "Vazirmatn-Bold.ttf"
+    ]
+
+    for file in fontFiles {
+      let base = (file as NSString).deletingPathExtension
+      let ext = (file as NSString).pathExtension
+      if let url = bundle.url(forResource: base, withExtension: ext, subdirectory: "flutter_assets/assets/fonts") {
+        fontUrls.append(url)
+      }
+      let candidatePaths = [
+        bundle.bundleURL.appendingPathComponent("Contents/Frameworks/App.framework/Resources/flutter_assets/assets/fonts/\(file)"),
+        bundle.bundleURL.appendingPathComponent("Contents/Frameworks/App.framework/Versions/A/Resources/flutter_assets/assets/fonts/\(file)"),
+        bundle.bundleURL.appendingPathComponent("Contents/Resources/flutter_assets/assets/fonts/\(file)"),
+        URL(fileURLWithPath: "/Users/user/Library/Fonts/\(file)")
+      ]
+      for p in candidatePaths {
+        if FileManager.default.fileExists(atPath: p.path) {
+          fontUrls.append(p)
+        }
       }
     }
+
+    for url in fontUrls {
+      var error: Unmanaged<CFError>?
+      CTFontManagerRegisterFontsForURL(url as CFURL, .process, &error)
+    }
+  }
+
+  static func estedadFont(size: CGFloat, weight: NSFont.Weight = .regular) -> NSFont {
+    let fontName: String
+    if weight == .bold || weight == .heavy || weight == .black {
+      fontName = "Estedad-Bold"
+    } else if weight == .semibold {
+      fontName = "Estedad-SemiBold"
+    } else if weight == .medium {
+      fontName = "Estedad-Medium"
+    } else {
+      fontName = "Estedad-Regular"
+    }
+    if let customFont = NSFont(name: fontName, size: size) {
+      return customFont
+    }
+    if let baseFont = NSFont(name: "Estedad", size: size) {
+      return baseFont
+    }
+    return vazirmatnFont(size: size, weight: weight)
   }
 
   static func vazirmatnFont(size: CGFloat, weight: NSFont.Weight = .regular) -> NSFont {
@@ -124,7 +157,7 @@ class AppDelegate: FlutterAppDelegate {
         button.image = img
         button.imagePosition = (img != nil) ? .imageLeading : .noImage
         button.title = (img != nil) ? " ۰۰:۰۰" : "🕌 ۰۰:۰۰"
-        button.font = NSFont.monospacedDigitSystemFont(ofSize: 13.0, weight: .bold)
+        button.font = AppDelegate.estedadFont(size: 13.0, weight: .bold)
       }
       item.menu = self.buildMenu()
     }
@@ -214,7 +247,7 @@ class AppDelegate: FlutterAppDelegate {
         button.image = img
         button.imagePosition = (img != nil) ? .imageLeading : .noImage
         button.title = (img != nil) ? " \(timeStr)" : "🕌 \(timeStr)"
-        button.font = NSFont.monospacedDigitSystemFont(ofSize: 13.0, weight: .bold)
+        button.font = AppDelegate.estedadFont(size: 13.0, weight: .bold)
       }
       item.menu = self.buildMenu()
     }
@@ -234,72 +267,41 @@ class AppDelegate: FlutterAppDelegate {
     let menu = NSMenu()
     menu.autoenablesItems = false
 
-    func rtlAttr(_ string: String, font: NSFont, color: NSColor, alignment: NSTextAlignment = .right) -> NSAttributedString {
-      let para = NSMutableParagraphStyle()
-      para.alignment = alignment
-      para.baseWritingDirection = .rightToLeft
-      return NSAttributedString(string: string, attributes: [
-        .font: font,
-        .foregroundColor: color,
-        .paragraphStyle: para
-      ])
-    }
-
-    // App Header Item (Clicking opens window)
-    let headerItem = NSMenuItem(
-      title: "برنامه اذکار من (اوقات شرعی)",
-      action: #selector(showMainWindow),
-      keyEquivalent: ""
-    )
-    headerItem.target = self
-    headerItem.attributedTitle = rtlAttr(
-      "برنامه اذکار من (اوقات شرعی)",
-      font: AppDelegate.vazirmatnFont(size: 13.5, weight: .bold),
-      color: NSColor.labelColor
-    )
-    menu.addItem(headerItem)
-
-    if let d = dateText, !d.isEmpty {
-      let dateItem = NSMenuItem(title: "\(d)", action: nil, keyEquivalent: "")
-      dateItem.isEnabled = false
-      dateItem.attributedTitle = rtlAttr(
-        "\(d)",
-        font: AppDelegate.vazirmatnFont(size: 11.5, weight: .medium),
-        color: NSColor.secondaryLabelColor
-      )
-      menu.addItem(dateItem)
-    }
-
-    // Next Prayer Countdown Banner
+    // 1. App Header (Title, Date, Countdown)
+    var countdownStr: String? = nil
     if let np = nextPrayerInfo,
        let label = np["label"] as? String,
        let delta = np["delta"] as? String,
        let time = np["time"] as? String {
-      let countdownItem = NSMenuItem(
-        title: "تا \(label): \(delta) (ساعت \(time))",
-        action: #selector(showMainWindow),
-        keyEquivalent: ""
-      )
-      countdownItem.target = self
-      countdownItem.attributedTitle = rtlAttr(
-        "تا \(label): \(delta) (ساعت \(time))",
-        font: AppDelegate.vazirmatnFont(size: 12.5, weight: .bold),
-        color: NSColor.systemOrange
-      )
-      menu.addItem(countdownItem)
+      countdownStr = "تا \(label): \(delta) (ساعت \(time))"
     }
+
+    var headerHeight: CGFloat = 34.0
+    if dateText != nil && !dateText!.isEmpty { headerHeight += 22.0 }
+    if countdownStr != nil { headerHeight += 26.0 }
+
+    let headerItem = NSMenuItem()
+    let headerView = PrayerMenuHeaderView(
+      frame: NSRect(x: 0, y: 0, width: 330, height: headerHeight),
+      title: "برنامه اذکار من (اوقات شرعی)",
+      dateText: dateText,
+      countdownText: countdownStr,
+      target: self,
+      action: #selector(showMainWindow)
+    )
+    headerItem.view = headerView
+    menu.addItem(headerItem)
 
     menu.addItem(NSMenuItem.separator())
 
-    // Prayer Times Section Header
-    let timesHeader = NSMenuItem(title: "جدول اوقات شرعی امروز:", action: nil, keyEquivalent: "")
-    timesHeader.isEnabled = false
-    timesHeader.attributedTitle = rtlAttr(
-      "جدول اوقات شرعی امروز:",
-      font: AppDelegate.vazirmatnFont(size: 11.5, weight: .bold),
-      color: NSColor.secondaryLabelColor
+    // 2. Prayer Times Section Header
+    let timesHeaderItem = NSMenuItem()
+    let timesHeaderView = PrayerSectionHeaderView(
+      frame: NSRect(x: 0, y: 0, width: 330, height: 22),
+      title: "جدول اوقات شرعی امروز:"
     )
-    menu.addItem(timesHeader)
+    timesHeaderItem.view = timesHeaderView
+    menu.addItem(timesHeaderItem)
 
     let prayerOrder: [(key: String, name: String, sfSymbol: String)] = [
       ("fajr", "اذان صبح", "sunrise.fill"),
@@ -319,7 +321,7 @@ class AppDelegate: FlutterAppDelegate {
 
         let item = NSMenuItem()
         let rowView = PrayerRowMenuItemView(
-          frame: NSRect(x: 0, y: 0, width: 250, height: 26),
+          frame: NSRect(x: 0, y: 0, width: 330, height: 28),
           sfSymbol: p.sfSymbol,
           name: p.name,
           time: timeStr,
@@ -332,47 +334,56 @@ class AppDelegate: FlutterAppDelegate {
       }
     }
 
-    // Zikr & Hadith Section (if available)
-    if let z = zikrText, !z.isEmpty {
+    // 3. Zikr & Hadith Section (if available)
+    if (zikrText != nil && !zikrText!.isEmpty) || (hadithText != nil && !hadithText!.isEmpty) {
       menu.addItem(NSMenuItem.separator())
-      let zikrItem = NSMenuItem(title: "📿 ذکر: \(z)", action: #selector(showMainWindow), keyEquivalent: "")
-      zikrItem.target = self
-      zikrItem.attributedTitle = rtlAttr(
-        "📿 ذکر: \(z)",
-        font: AppDelegate.vazirmatnFont(size: 12.0, weight: .medium),
-        color: NSColor.labelColor
-      )
-      menu.addItem(zikrItem)
-    }
 
-    if let h = hadithText, !h.isEmpty {
-      let shortHadith = h.count > 50 ? String(h.prefix(47)) + "..." : h
-      let hadithItem = NSMenuItem(title: "📜 حدیث: \(shortHadith)", action: #selector(showMainWindow), keyEquivalent: "")
-      hadithItem.target = self
-      hadithItem.toolTip = h
-      hadithItem.attributedTitle = rtlAttr(
-        "📜 حدیث: \(shortHadith)",
-        font: AppDelegate.vazirmatnFont(size: 12.0, weight: .medium),
-        color: NSColor.labelColor
-      )
-      menu.addItem(hadithItem)
+      if let z = zikrText, !z.isEmpty {
+        let zikrItem = NSMenuItem()
+        let zikrView = PrayerTextRowMenuItemView(
+          frame: NSRect(x: 0, y: 0, width: 330, height: 26),
+          text: "📿 ذکر: \(z)",
+          target: self,
+          action: #selector(showMainWindow)
+        )
+        zikrItem.view = zikrView
+        menu.addItem(zikrItem)
+      }
+
+      if let h = hadithText, !h.isEmpty {
+        let shortHadith = h.count > 45 ? String(h.prefix(42)) + "..." : h
+        let hadithItem = NSMenuItem()
+        let hadithView = PrayerTextRowMenuItemView(
+          frame: NSRect(x: 0, y: 0, width: 330, height: 26),
+          text: "📜 حدیث: \(shortHadith)",
+          fullText: h,
+          target: self,
+          action: #selector(showMainWindow)
+        )
+        hadithItem.view = hadithView
+        menu.addItem(hadithItem)
+      }
     }
 
     menu.addItem(NSMenuItem.separator())
 
-    // Window Controls
+    // 4. Window Controls
     let isWinVisible = mainFlutterWindow?.isVisible == true && NSApp.isActive
     let toggleItem = NSMenuItem(
       title: isWinVisible ? "مخفی کردن پنجره" : "نمایش پنجره اصلی برنامه",
       action: #selector(toggleMainWindow),
       keyEquivalent: "o"
     )
+    toggleItem.keyEquivalentModifierMask = [.command]
     toggleItem.target = self
-    toggleItem.attributedTitle = rtlAttr(
-      isWinVisible ? "مخفی کردن پنجره" : "نمایش پنجره اصلی برنامه",
-      font: AppDelegate.vazirmatnFont(size: 12.0, weight: .regular),
-      color: NSColor.labelColor
+    let toggleView = PrayerActionMenuItemView(
+      frame: NSRect(x: 0, y: 0, width: 330, height: 26),
+      title: isWinVisible ? "مخفی کردن پنجره" : "نمایش پنجره اصلی برنامه",
+      shortcut: "⌘ O",
+      target: self,
+      action: #selector(toggleMainWindow)
     )
+    toggleItem.view = toggleView
     menu.addItem(toggleItem)
 
     let widgetModeItem = NSMenuItem(
@@ -380,12 +391,16 @@ class AppDelegate: FlutterAppDelegate {
       action: #selector(toggleWidgetMode),
       keyEquivalent: "w"
     )
+    widgetModeItem.keyEquivalentModifierMask = [.command]
     widgetModeItem.target = self
-    widgetModeItem.attributedTitle = rtlAttr(
-      isWidgetMode ? "✓ حالت ویجت شناور رومیزی" : "حالت ویجت شناور رومیزی",
-      font: AppDelegate.vazirmatnFont(size: 12.0, weight: .regular),
-      color: NSColor.labelColor
+    let widgetView = PrayerActionMenuItemView(
+      frame: NSRect(x: 0, y: 0, width: 330, height: 26),
+      title: isWidgetMode ? "✓ حالت ویجت شناور رومیزی" : "حالت ویجت شناور رومیزی",
+      shortcut: "⌘ W",
+      target: self,
+      action: #selector(toggleWidgetMode)
     )
+    widgetModeItem.view = widgetView
     menu.addItem(widgetModeItem)
 
     let pinItem = NSMenuItem(
@@ -393,28 +408,37 @@ class AppDelegate: FlutterAppDelegate {
       action: #selector(toggleAlwaysOnTop),
       keyEquivalent: "p"
     )
+    pinItem.keyEquivalentModifierMask = [.command]
     pinItem.target = self
-    pinItem.attributedTitle = rtlAttr(
-      isAlwaysOnTop ? "✓ شناور ماندن در بالا" : "همیشه در بالاترین لایه (Pin)",
-      font: AppDelegate.vazirmatnFont(size: 12.0, weight: .regular),
-      color: NSColor.labelColor
+    let pinView = PrayerActionMenuItemView(
+      frame: NSRect(x: 0, y: 0, width: 330, height: 26),
+      title: isAlwaysOnTop ? "✓ شناور ماندن در بالا" : "همیشه در بالاترین لایه (Pin)",
+      shortcut: "⌘ P",
+      target: self,
+      action: #selector(toggleAlwaysOnTop)
     )
+    pinItem.view = pinView
     menu.addItem(pinItem)
 
     menu.addItem(NSMenuItem.separator())
 
-    // Quit Item
+    // 5. Quit Item
     let quitItem = NSMenuItem(
       title: "خروج از اذکار من",
       action: #selector(quitApp),
       keyEquivalent: "q"
     )
+    quitItem.keyEquivalentModifierMask = [.command]
     quitItem.target = self
-    quitItem.attributedTitle = rtlAttr(
-      "خروج از اذکار من",
-      font: AppDelegate.vazirmatnFont(size: 12.0, weight: .regular),
-      color: NSColor.systemRed
+    let quitView = PrayerActionMenuItemView(
+      frame: NSRect(x: 0, y: 0, width: 330, height: 26),
+      title: "خروج از اذکار من",
+      shortcut: "⌘ Q",
+      isDestructive: true,
+      target: self,
+      action: #selector(quitApp)
     )
+    quitItem.view = quitView
     menu.addItem(quitItem)
 
     return menu
@@ -522,7 +546,159 @@ class AppDelegate: FlutterAppDelegate {
   }
 }
 
-// MARK: - Custom RTL Prayer Row View for macOS Menu (Vector SF Symbols)
+// MARK: - Custom RTL Menu Views (Estedad Font)
+
+/// Header card showing app title, Jalali date, and next prayer countdown banner
+class PrayerMenuHeaderView: NSView {
+  let title: String
+  let dateText: String?
+  let countdownText: String?
+  weak var target: AnyObject?
+  let action: Selector?
+
+  private var isHighlighted: Bool = false
+  private var trackingArea: NSTrackingArea?
+
+  init(frame: NSRect, title: String, dateText: String?, countdownText: String?, target: AnyObject?, action: Selector?) {
+    self.title = title
+    self.dateText = dateText
+    self.countdownText = countdownText
+    self.target = target
+    self.action = action
+    super.init(frame: frame)
+    self.autoresizingMask = [.width]
+  }
+
+  required init?(coder: NSCoder) {
+    fatalError("init(coder:) has not been implemented")
+  }
+
+  override func updateTrackingAreas() {
+    super.updateTrackingAreas()
+    if let ta = trackingArea { removeTrackingArea(ta) }
+    trackingArea = NSTrackingArea(
+      rect: bounds,
+      options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect],
+      owner: self,
+      userInfo: nil
+    )
+    addTrackingArea(trackingArea!)
+  }
+
+  override func mouseEntered(with event: NSEvent) {
+    isHighlighted = true
+    needsDisplay = true
+  }
+
+  override func mouseExited(with event: NSEvent) {
+    isHighlighted = false
+    needsDisplay = true
+  }
+
+  override func mouseUp(with event: NSEvent) {
+    if bounds.contains(convert(event.locationInWindow, from: nil)) {
+      if let menu = enclosingMenuItem?.menu {
+        menu.cancelTracking()
+      }
+      if let action = action, let target = target {
+        _ = target.perform(action, with: self)
+      }
+    }
+  }
+
+  override func draw(_ dirtyRect: NSRect) {
+    super.draw(dirtyRect)
+
+    let insetRect = bounds.insetBy(dx: 5, dy: 2)
+    if isHighlighted {
+      NSColor.selectedContentBackgroundColor.withAlphaComponent(0.18).setFill()
+      let path = NSBezierPath(roundedRect: insetRect, xRadius: 6, yRadius: 6)
+      path.fill()
+    }
+
+    let isDark = effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+    let titleColor = isDark ? NSColor.white : NSColor(white: 0.10, alpha: 1.0)
+    let subColor = isDark ? NSColor(white: 0.65, alpha: 1.0) : NSColor(white: 0.45, alpha: 1.0)
+
+    let rightMargin: CGFloat = 14.0
+    let leftMargin: CGFloat = 14.0
+    let contentWidth = bounds.width - rightMargin - leftMargin
+
+    let rightPara = NSMutableParagraphStyle()
+    rightPara.alignment = .right
+    rightPara.baseWritingDirection = .rightToLeft
+
+    var currentY = bounds.height - 24.0
+
+    // Title
+    let titleAttr: [NSAttributedString.Key: Any] = [
+      .font: AppDelegate.estedadFont(size: 13.5, weight: .bold),
+      .foregroundColor: titleColor,
+      .paragraphStyle: rightPara
+    ]
+    let titleRect = NSRect(x: leftMargin, y: currentY, width: contentWidth, height: 20)
+    (title as NSString).draw(in: titleRect, withAttributes: titleAttr)
+
+    // Date
+    if let d = dateText, !d.isEmpty {
+      currentY -= 20.0
+      let dateAttr: [NSAttributedString.Key: Any] = [
+        .font: AppDelegate.estedadFont(size: 11.5, weight: .medium),
+        .foregroundColor: subColor,
+        .paragraphStyle: rightPara
+      ]
+      let dateRect = NSRect(x: leftMargin, y: currentY, width: contentWidth, height: 18)
+      (d as NSString).draw(in: dateRect, withAttributes: dateAttr)
+    }
+
+    // Countdown
+    if let cd = countdownText, !cd.isEmpty {
+      currentY -= 24.0
+      let cdAttr: [NSAttributedString.Key: Any] = [
+        .font: AppDelegate.estedadFont(size: 12.0, weight: .bold),
+        .foregroundColor: NSColor.systemOrange,
+        .paragraphStyle: rightPara
+      ]
+      let cdRect = NSRect(x: leftMargin, y: currentY, width: contentWidth, height: 18)
+      (cd as NSString).draw(in: cdRect, withAttributes: cdAttr)
+    }
+  }
+}
+
+/// Section title (e.g. "جدول اوقات شرعی امروز:")
+class PrayerSectionHeaderView: NSView {
+  let title: String
+
+  init(frame: NSRect, title: String) {
+    self.title = title
+    super.init(frame: frame)
+    self.autoresizingMask = [.width]
+  }
+
+  required init?(coder: NSCoder) {
+    fatalError("init(coder:) has not been implemented")
+  }
+
+  override func draw(_ dirtyRect: NSRect) {
+    super.draw(dirtyRect)
+    let rightPara = NSMutableParagraphStyle()
+    rightPara.alignment = .right
+    rightPara.baseWritingDirection = .rightToLeft
+
+    let isDark = effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+    let color = isDark ? NSColor(white: 0.65, alpha: 1.0) : NSColor(white: 0.45, alpha: 1.0)
+
+    let attr: [NSAttributedString.Key: Any] = [
+      .font: AppDelegate.estedadFont(size: 11.5, weight: .bold),
+      .foregroundColor: color,
+      .paragraphStyle: rightPara
+    ]
+    let rect = NSRect(x: 14, y: (bounds.height - 18) / 2, width: bounds.width - 28, height: 18)
+    (title as NSString).draw(in: rect, withAttributes: attr)
+  }
+}
+
+/// Prayer row item: SF Symbol icon + Name on right, Time in Persian digits on left, with active badge & hover highlight
 class PrayerRowMenuItemView: NSView {
   let sfSymbol: String
   let name: String
@@ -542,6 +718,7 @@ class PrayerRowMenuItemView: NSView {
     self.target = target
     self.action = action
     super.init(frame: frame)
+    self.autoresizingMask = [.width]
   }
 
   required init?(coder: NSCoder) {
@@ -614,12 +791,13 @@ class PrayerRowMenuItemView: NSView {
     }
 
     let font: NSFont = isNext
-      ? AppDelegate.vazirmatnFont(size: 13.0, weight: .bold)
-      : AppDelegate.vazirmatnFont(size: 12.5, weight: .medium)
+      ? AppDelegate.estedadFont(size: 13.0, weight: .bold)
+      : AppDelegate.estedadFont(size: 12.5, weight: .medium)
 
     // 1. Right side: SF Symbol vector icon + Prayer Name (RTL)
     let iconSize: CGFloat = 14.0
-    let iconX = bounds.width - 24.0
+    let rightMargin: CGFloat = 14.0
+    let iconX = bounds.width - rightMargin - iconSize
     let iconY = (bounds.height - iconSize) / 2.0
 
     if let symbolImg = AppDelegate.systemSymbolImage(name: sfSymbol, pointSize: 12.5, weight: isNext ? .bold : .medium) {
@@ -632,7 +810,7 @@ class PrayerRowMenuItemView: NSView {
       }
     }
 
-    // Name text next to icon
+    // Name text next to icon (right-aligned)
     let rightText = isNext ? "\(name)  ●" : name
     let rightPara = NSMutableParagraphStyle()
     rightPara.alignment = .right
@@ -643,8 +821,10 @@ class PrayerRowMenuItemView: NSView {
       .foregroundColor: textColor,
       .paragraphStyle: rightPara
     ]
-    let textWidth = iconX - 8.0 - 70.0
-    let rightRect = NSRect(x: 70, y: (bounds.height - 18) / 2, width: textWidth, height: 18)
+    let leftMargin: CGFloat = 14.0
+    let timeWidth: CGFloat = 65.0
+    let textWidth = iconX - 8.0 - (leftMargin + timeWidth)
+    let rightRect = NSRect(x: leftMargin + timeWidth, y: (bounds.height - 18) / 2, width: textWidth, height: 18)
     (rightText as NSString).draw(in: rightRect, withAttributes: rightAttr)
 
     // 2. Left side: Prayer Time in Persian digits (Left-aligned)
@@ -655,8 +835,208 @@ class PrayerRowMenuItemView: NSView {
       .foregroundColor: isHighlighted ? .white : (isNext ? NSColor.systemGreen : (isDark ? NSColor(white: 0.90, alpha: 1.0) : NSColor(white: 0.20, alpha: 1.0))),
       .paragraphStyle: leftPara
     ]
-    let leftRect = NSRect(x: 12, y: (bounds.height - 18) / 2, width: 60, height: 18)
+    let leftRect = NSRect(x: leftMargin, y: (bounds.height - 18) / 2, width: timeWidth, height: 18)
     (time as NSString).draw(in: leftRect, withAttributes: leftAttr)
+  }
+}
+
+/// Text row item for Zikr and Hadith (right-aligned, Estedad font, hover highlight, click handling)
+class PrayerTextRowMenuItemView: NSView {
+  let text: String
+  weak var target: AnyObject?
+  let action: Selector?
+
+  private var isHighlighted: Bool = false
+  private var trackingArea: NSTrackingArea?
+
+  init(frame: NSRect, text: String, fullText: String? = nil, target: AnyObject?, action: Selector?) {
+    self.text = text
+    self.target = target
+    self.action = action
+    super.init(frame: frame)
+    self.autoresizingMask = [.width]
+    if let ft = fullText {
+      self.toolTip = ft
+    }
+  }
+
+  required init?(coder: NSCoder) {
+    fatalError("init(coder:) has not been implemented")
+  }
+
+  override func updateTrackingAreas() {
+    super.updateTrackingAreas()
+    if let ta = trackingArea { removeTrackingArea(ta) }
+    trackingArea = NSTrackingArea(
+      rect: bounds,
+      options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect],
+      owner: self,
+      userInfo: nil
+    )
+    addTrackingArea(trackingArea!)
+  }
+
+  override func mouseEntered(with event: NSEvent) {
+    isHighlighted = true
+    needsDisplay = true
+  }
+
+  override func mouseExited(with event: NSEvent) {
+    isHighlighted = false
+    needsDisplay = true
+  }
+
+  override func mouseUp(with event: NSEvent) {
+    if bounds.contains(convert(event.locationInWindow, from: nil)) {
+      if let menu = enclosingMenuItem?.menu {
+        menu.cancelTracking()
+      }
+      if let action = action, let target = target {
+        _ = target.perform(action, with: self)
+      }
+    }
+  }
+
+  override func draw(_ dirtyRect: NSRect) {
+    super.draw(dirtyRect)
+
+    let insetRect = bounds.insetBy(dx: 5, dy: 1.5)
+    if isHighlighted {
+      NSColor.selectedContentBackgroundColor.setFill()
+      let path = NSBezierPath(roundedRect: insetRect, xRadius: 5, yRadius: 5)
+      path.fill()
+    }
+
+    let isDark = effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+    let textColor: NSColor = isHighlighted ? .white : (isDark ? NSColor(white: 0.92, alpha: 1.0) : NSColor(white: 0.18, alpha: 1.0))
+
+    let para = NSMutableParagraphStyle()
+    para.alignment = .right
+    para.baseWritingDirection = .rightToLeft
+    para.lineBreakMode = .byTruncatingTail
+
+    let attr: [NSAttributedString.Key: Any] = [
+      .font: AppDelegate.estedadFont(size: 12.0, weight: .medium),
+      .foregroundColor: textColor,
+      .paragraphStyle: para
+    ]
+
+    let rect = NSRect(x: 14, y: (bounds.height - 18) / 2, width: bounds.width - 28, height: 18)
+    (text as NSString).draw(in: rect, withAttributes: attr)
+  }
+}
+
+/// Action item with title right-aligned and keyboard shortcut left-aligned, Estedad font, and hover highlight
+class PrayerActionMenuItemView: NSView {
+  let title: String
+  let shortcut: String
+  let isDestructive: Bool
+  weak var target: AnyObject?
+  let action: Selector?
+
+  private var isHighlighted: Bool = false
+  private var trackingArea: NSTrackingArea?
+
+  init(frame: NSRect, title: String, shortcut: String, isDestructive: Bool = false, target: AnyObject?, action: Selector?) {
+    self.title = title
+    self.shortcut = shortcut
+    self.isDestructive = isDestructive
+    self.target = target
+    self.action = action
+    super.init(frame: frame)
+    self.autoresizingMask = [.width]
+  }
+
+  required init?(coder: NSCoder) {
+    fatalError("init(coder:) has not been implemented")
+  }
+
+  override func updateTrackingAreas() {
+    super.updateTrackingAreas()
+    if let ta = trackingArea { removeTrackingArea(ta) }
+    trackingArea = NSTrackingArea(
+      rect: bounds,
+      options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect],
+      owner: self,
+      userInfo: nil
+    )
+    addTrackingArea(trackingArea!)
+  }
+
+  override func mouseEntered(with event: NSEvent) {
+    isHighlighted = true
+    needsDisplay = true
+  }
+
+  override func mouseExited(with event: NSEvent) {
+    isHighlighted = false
+    needsDisplay = true
+  }
+
+  override func mouseUp(with event: NSEvent) {
+    if bounds.contains(convert(event.locationInWindow, from: nil)) {
+      if let menu = enclosingMenuItem?.menu {
+        menu.cancelTracking()
+      }
+      if let action = action, let target = target {
+        _ = target.perform(action, with: self)
+      }
+    }
+  }
+
+  override func draw(_ dirtyRect: NSRect) {
+    super.draw(dirtyRect)
+
+    let insetRect = bounds.insetBy(dx: 5, dy: 1.5)
+    if isHighlighted {
+      NSColor.selectedContentBackgroundColor.setFill()
+      let path = NSBezierPath(roundedRect: insetRect, xRadius: 5, yRadius: 5)
+      path.fill()
+    }
+
+    let isDark = effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+    let titleColor: NSColor
+    if isHighlighted {
+      titleColor = .white
+    } else if isDestructive {
+      titleColor = NSColor.systemRed
+    } else {
+      titleColor = isDark ? NSColor(white: 0.92, alpha: 1.0) : NSColor(white: 0.18, alpha: 1.0)
+    }
+
+    let shortcutColor: NSColor = isHighlighted ? .white : (isDark ? NSColor(white: 0.65, alpha: 1.0) : NSColor(white: 0.50, alpha: 1.0))
+
+    // 1. Right side: Title (right-aligned)
+    let rightPara = NSMutableParagraphStyle()
+    rightPara.alignment = .right
+    rightPara.baseWritingDirection = .rightToLeft
+
+    let rightAttr: [NSAttributedString.Key: Any] = [
+      .font: AppDelegate.estedadFont(size: 12.0, weight: .regular),
+      .foregroundColor: titleColor,
+      .paragraphStyle: rightPara
+    ]
+
+    let rightMargin: CGFloat = 14.0
+    let leftMargin: CGFloat = 14.0
+    let shortcutWidth: CGFloat = 45.0
+    let titleWidth = bounds.width - rightMargin - (leftMargin + shortcutWidth)
+    let titleRect = NSRect(x: leftMargin + shortcutWidth, y: (bounds.height - 18) / 2, width: titleWidth, height: 18)
+    (title as NSString).draw(in: titleRect, withAttributes: rightAttr)
+
+    // 2. Left side: Shortcut (left-aligned)
+    if !shortcut.isEmpty {
+      let leftPara = NSMutableParagraphStyle()
+      leftPara.alignment = .left
+
+      let leftAttr: [NSAttributedString.Key: Any] = [
+        .font: AppDelegate.estedadFont(size: 11.5, weight: .medium),
+        .foregroundColor: shortcutColor,
+        .paragraphStyle: leftPara
+      ]
+      let shortcutRect = NSRect(x: leftMargin, y: (bounds.height - 18) / 2, width: shortcutWidth, height: 18)
+      (shortcut as NSString).draw(in: shortcutRect, withAttributes: leftAttr)
+    }
   }
 }
 
