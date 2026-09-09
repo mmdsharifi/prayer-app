@@ -21,16 +21,16 @@ class AppDelegate: FlutterAppDelegate {
   private var dateText: String?
 
   override func applicationDidFinishLaunching(_ notification: Notification) {
+    super.applicationDidFinishLaunching(notification)
+
     registerCustomFonts()
 
-    let controller = mainFlutterWindow?.contentViewController as? FlutterViewController
-    if let controller = controller {
+    if let controller = mainFlutterWindow?.contentViewController as? FlutterViewController {
       setupMethodChannel(messenger: controller.engine.binaryMessenger)
     }
 
     setupStatusBarItem()
     configureWindowAppearance()
-    super.applicationDidFinishLaunching(notification)
   }
 
   // MARK: - Custom Font Registration (Vazirmatn)
@@ -106,9 +106,11 @@ class AppDelegate: FlutterAppDelegate {
 
   private func setupStatusBarItem() {
     statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+    statusItem?.isVisible = true
     if let button = statusItem?.button {
       button.image = AppDelegate.systemSymbolImage(name: "sun.max.fill", pointSize: 13.0, weight: .medium)
       button.imagePosition = .imageLeading
+      button.title = " ۰۰:۰۰"
 
       let attr = NSAttributedString(
         string: " ۰۰:۰۰",
@@ -126,14 +128,10 @@ class AppDelegate: FlutterAppDelegate {
 
   @objc private func statusItemClicked(_ sender: NSStatusBarButton) {
     let menu = buildMenu()
-    statusItem?.menu = menu
-    statusItem?.button?.performClick(nil)
-    DispatchQueue.main.async {
-      self.statusItem?.menu = nil
-    }
+    statusItem?.popUpMenu(menu)
   }
 
-  private func setupMethodChannel(messenger: FlutterBinaryMessenger) {
+  func setupMethodChannel(messenger: FlutterBinaryMessenger) {
     methodChannel = FlutterMethodChannel(
       name: "prayer_app/menubar",
       binaryMessenger: messenger
